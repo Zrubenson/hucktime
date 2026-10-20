@@ -1,0 +1,10 @@
+{
+  "name": "HuckTime",
+  "short_name": "HuckTime",
+  "description": "Real-time disc golf time-share calculator",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#7c3aed",
+  "background_color": "#ede9fe",
+  "icons": [{"src":"icon.png","sizes":"192x192","type":"image/png"}]
+}

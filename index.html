@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#7c3aed" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HuckTime" />
+  <link rel="manifest" href="manifest.json" />
+  <title>HuckTime ✦</title>
+  <style>
+    :root {
+      --primary:#7c3aed; --primary-light:#ddd6fe; --primary-dark:#5b21b6;
+      --secondary:#db2777; --text:#1e1b4b; --text-muted:#7c74d4;
+      --cloud-border:rgba(139,92,246,0.18); --danger:#ef4444;
+      --success:#059669;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      color:var(--text); background:linear-gradient(150deg,#c7d2fe 0%,#e0e7ff 20%,#ede9fe 50%,#fce7f3 80%,#fdf2f8 100%);
+      background-attachment:fixed; overflow-x:hidden;
+    }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background:radial-gradient(ellipse 70% 30% at 10% 10%,rgba(196,181,253,.35) 0%,transparent 100%),
+        radial-gradient(ellipse 50% 20% at 90% 40%,rgba(251,207,232,.35) 0%,transparent 100%),
+        radial-gradient(ellipse 60% 30% at 40% 90%,rgba(186,230,253,.3) 0%,transparent 100%);
+      pointer-events:none; z-index:0;
+    }
+    .sky-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+    .puff { position:absolute; border-radius:50%; }
+    .cloud-group { position:absolute; pointer-events:none; will-change:transform; animation:driftCloud linear infinite; }
+    @keyframes driftCloud { from{transform:translateX(0)} to{transform:translateX(calc(100vw + 560px))} }
+    @keyframes windFlow { from{stroke-dashoffset:0} to{stroke-dashoffset:200} }
+    .wind-svg { position:absolute; inset:0; width:100%; height:100%; }
+    @keyframes floatIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes headerBob { 0%,100%{transform:translateY(0) rotate(-6deg)} 50%{transform:translateY(-5px) rotate(6deg)} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── LOADING ── */
+    .loading-screen {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(150deg,#c7d2fe 0%,#ede9fe 50%,#fce7f3 100%);
+      z-index:999; flex-direction:column; gap:16px;
+    }
+    .loading-unicorn { font-size:52px; animation:headerBob 1s ease-in-out infinite; }
+    .loading-text { font-size:15px; font-weight:800; color:var(--primary); }
+
+    /* ── AUTH ── */
+    .auth-screen {
+      min-height:100dvh; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; padding:24px; gap:8px; position:relative; z-index:1;
+    }
+    .auth-card {
+      background:rgba(255,255,255,.9); border-radius:24px; padding:28px;
+      width:100%; max-width:380px;
+      box-shadow:0 8px 32px rgba(109,40,217,.15); border:1px solid rgba(139,92,246,.18);
+    }
+    .auth-title { font-size:28px; font-weight:900; color:#6d28d9; text-align:center; margin-bottom:2px; }
+    .auth-sub { font-size:13px; color:#7c74d4; text-align:center; font-weight:600; margin-bottom:20px; }
+    .auth-tabs { display:flex; border-radius:12px; overflow:hidden; border:1.5px solid rgba(139,92,246,.2); margin-bottom:20px; }
+    .auth-tab {
+      flex:1; padding:10px; font-weight:800; font-size:13px; border:none;
+      background:rgba(255,255,255,.7); color:#7c74d4; cursor:pointer; transition:all .15s;
+    }
+    .auth-tab.active {
+      background:linear-gradient(135deg,#7c3aed,#be185d); color:white;
+    }
+    .auth-error {
+      display:none; background:rgba(239,68,68,.1); color:#dc2626;
+      border-radius:10px; padding:10px 12px; font-size:13px;
+      font-weight:700; margin-bottom:12px; line-height:1.4;
+    }
+
+    /* ── HOME ── */
+    .home-screen {
+      min-height:100dvh; display:flex; flex-direction:column; position:relative; z-index:1;
+    }
+    .home-header {
+      background:linear-gradient(135deg,#6d28d9,#be185d); color:white;
+      padding:16px 16px 14px; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 4px 24px rgba(109,40,217,.4);
+    }
+    .home-header h1 { font-size:22px; font-weight:900; letter-spacing:-.5px; }
+    .home-user { font-size:11px; opacity:.75; margin-top:1px; font-weight:600; }
+    .home-body { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:12px; }
+    .huck-date-group { margin-bottom:4px; }
+    .huck-date-label {
+      font-size:10px; font-weight:900; color:var(--text-muted);
+      text-transform:uppercase; letter-spacing:1.2px; margin-bottom:6px; padding:0 2px;
+    }
+    .huck-item {
+      display:flex; align-items:center; gap:11px; padding:12px 14px;
+      background:rgba(255,255,255,.75); border-radius:14px;
+      border:1px solid rgba(139,92,246,.15); cursor:pointer; transition:background .15s;
+      animation:floatIn .18s ease;
+    }
+    .huck-item:hover { background:rgba(255,255,255,.95); }
+    .huck-item-icon { font-size:26px; flex-shrink:0; }
+    .huck-item-info { flex:1; min-width:0; }
+    .huck-item-name { font-size:15px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .huck-item-pin { font-size:12px; color:#7c74d4; font-weight:700; margin-top:2px; font-family:monospace; letter-spacing:.5px; }
+
+    /* ── HUCK SCREEN ── */
+    #screen-huck {
+      flex-direction:column; min-height:100dvh; max-width:480px; margin:0 auto;
+    }
+    .app-header {
+      background:linear-gradient(135deg,#6d28d9,#be185d); color:white;
+      padding:12px 12px 10px; position:sticky; top:0; z-index:100;
+      box-shadow:0 4px 24px rgba(109,40,217,.4);
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+    }
+    .header-center { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+    .header-title { font-size:18px; font-weight:900; letter-spacing:-.5px; }
+    .pin-badge {
+      font-size:12px; font-weight:900; letter-spacing:1.5px;
+      background:rgba(255,255,255,.2); border-radius:8px; padding:3px 9px;
+      display:flex; align-items:center; gap:5px; cursor:pointer;
+      border:1px solid rgba(255,255,255,.3); font-family:monospace;
+      transition:background .15s;
+    }
+    .pin-badge:active { background:rgba(255,255,255,.35); }
+    .nav {
+      display:flex; background:rgba(255,255,255,.88); backdrop-filter:blur(12px);
+      border-top:1px solid var(--cloud-border); position:sticky; bottom:0; z-index:100;
+      padding-bottom:env(safe-area-inset-bottom);
+      box-shadow:0 -4px 20px rgba(109,40,217,.08);
+    }
+    .nav-btn {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      padding:9px 2px 7px; border:none; background:none; cursor:pointer;
+      color:var(--text-muted); font-size:9px; font-weight:700; gap:3px; letter-spacing:.2px; transition:color .15s;
+    }
+    .nav-btn.active { color:var(--primary); }
+    .nav-btn svg { width:21px; height:21px; stroke-width:2; }
+    .nav-dot { width:4px; height:4px; border-radius:50%; background:var(--primary); opacity:0; transition:opacity .15s; margin-top:1px; }
+    .nav-btn.active .nav-dot { opacity:1; }
+    .main { flex:1; overflow-y:auto; position:relative; z-index:1; }
+    .section { display:none; padding:14px; flex-direction:column; gap:12px; }
+    .section.active { display:flex; }
+
+    /* ── CARDS ── */
+    .card {
+      background:rgba(255,255,255,.78); backdrop-filter:blur(14px); border-radius:20px; padding:18px;
+      border:1px solid var(--cloud-border);
+      box-shadow:0 4px 20px rgba(109,40,217,.07),0 1px 3px rgba(109,40,217,.04);
+      position:relative; overflow:hidden;
+    }
+    .card::before {
+      content:''; position:absolute; top:-30px; right:-30px; width:100px; height:100px;
+      border-radius:50%; background:radial-gradient(circle,rgba(196,181,253,.18) 0%,transparent 70%);
+      pointer-events:none;
+    }
+    .card-title { font-size:10px; font-weight:900; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.2px; margin-bottom:14px; }
+    .block-card {
+      background:rgba(255,255,255,.78); backdrop-filter:blur(14px);
+      border-radius:20px; border:1px solid var(--cloud-border);
+      box-shadow:0 6px 24px rgba(109,40,217,.1); overflow:hidden; animation:floatIn .22s ease;
+    }
+    .block-header {
+      background:linear-gradient(135deg,#7c3aed,#db2777); padding:13px 14px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .block-name-input {
+      flex:1; background:rgba(255,255,255,.18); border:1.5px solid rgba(255,255,255,.35);
+      border-radius:9px; padding:7px 11px; font-size:15px; font-weight:800; color:white; outline:none;
+      transition:background .15s,border-color .15s;
+    }
+    .block-name-input::placeholder { color:rgba(255,255,255,.55); }
+    .block-name-input:focus { background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.75); }
+    .block-del-btn {
+      width:32px; height:32px; border-radius:50%; border:1.5px solid rgba(255,255,255,.4);
+      background:rgba(255,255,255,.15); color:white; font-size:15px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; transition:background .15s;
+    }
+    .block-del-btn:hover { background:rgba(239,68,68,.45); }
+    .block-body { padding:16px; display:flex; flex-direction:column; gap:11px; }
+    .block-stat {
+      display:flex; align-items:center; justify-content:space-between; padding:10px 13px;
+      background:linear-gradient(135deg,rgba(196,181,253,.25),rgba(251,207,232,.25));
+      border-radius:11px; border:1px solid rgba(139,92,246,.12); gap:8px;
+    }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    .field label { font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.6px; }
+    .field input[type="number"],.field input[type="text"],.field input[type="email"],.field input[type="password"],.field select {
+      width:100%; padding:10px 12px; border:1.5px solid rgba(139,92,246,.2); border-radius:11px;
+      font-size:15px; color:var(--text); background:rgba(255,255,255,.75); outline:none;
+      transition:border-color .15s,background .15s; -webkit-appearance:none; appearance:none;
+    }
+    .field input:focus,.field select:focus { border-color:var(--primary); background:white; }
+    .field select {
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237c74d4' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 12px center; padding-right:34px; cursor:pointer;
+    }
+    .field-row { display:flex; gap:10px; }
+    .field-row .field { flex:1; }
+    .add-row { display:flex; gap:8px; align-items:flex-end; }
+    .add-row .field { flex:1; }
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      padding:11px 18px; border-radius:12px; border:none; font-size:14px; font-weight:800;
+      cursor:pointer; transition:opacity .15s,transform .1s; white-space:nowrap;
+    }
+    .btn:active { opacity:.78; transform:scale(.97); }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; box-shadow:0 4px 14px rgba(124,58,237,.3); }
+    .btn-wind { background:linear-gradient(135deg,rgba(196,181,253,.45),rgba(251,207,232,.45)); color:var(--primary); border:1.5px solid var(--cloud-border); }
+    .btn-ghost { background:rgba(255,255,255,.65); color:var(--text); border:1.5px solid var(--cloud-border); }
+    .btn-danger { background:var(--danger); color:white; }
+    .btn-sm { padding:7px 13px; font-size:13px; border-radius:9px; }
+    .btn-full { width:100%; }
+    .add-block-btn {
+      display:flex; align-items:center; justify-content:center; gap:8px;
+      padding:16px; background:rgba(255,255,255,.45); border:2px dashed rgba(139,92,246,.35);
+      border-radius:20px; cursor:pointer; color:var(--primary); font-size:14px; font-weight:800;
+      letter-spacing:.2px; transition:all .2s;
+    }
+    .add-block-btn:hover { background:rgba(255,255,255,.7); border-color:var(--primary); }
+    .add-block-btn:active { transform:scale(.98); }
+    .avatar {
+      width:36px; height:36px; border-radius:50%;
+      background:linear-gradient(135deg,var(--primary),var(--secondary));
+      color:white; display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:900; flex-shrink:0;
+      box-shadow:0 2px 8px rgba(124,58,237,.28);
+    }
+    .avatar.sm { width:28px; height:28px; font-size:10px; }
+    .avatar.emoji-av { background:rgba(255,255,255,.75); border:1.5px solid var(--cloud-border); font-size:20px; box-shadow:none; }
+    .avatar.sm.emoji-av { font-size:15px; }
+    .person-list { display:flex; flex-direction:column; gap:8px; }
+    .person-item {
+      display:flex; align-items:center; gap:10px; padding:10px 12px;
+      background:rgba(255,255,255,.6); border-radius:12px; border:1px solid var(--cloud-border); animation:floatIn .18s ease;
+    }
+    .person-name { flex:1; font-size:15px; font-weight:600; }
+    .remove-btn {
+      width:28px; height:28px; border-radius:50%; border:none; background:none;
+      cursor:pointer; color:var(--text-muted); font-size:16px;
+      display:flex; align-items:center; justify-content:center; transition:all .15s;
+    }
+    .remove-btn:hover { color:var(--danger); background:rgba(239,68,68,.1); }
+    .fav-btn {
+      width:28px; height:28px; border-radius:50%; border:none; background:none;
+      cursor:pointer; color:var(--text-muted); font-size:17px;
+      display:flex; align-items:center; justify-content:center; transition:all .15s;
+    }
+    .fav-btn:hover { color:#f59e0b; background:rgba(245,158,11,.1); }
+    .fav-btn.fav-on { color:#f59e0b; }
+    .sr-list { display:flex; flex-direction:column; gap:8px; }
+    .sr-item {
+      display:flex; align-items:center; gap:10px; padding:10px 13px;
+      background:rgba(255,255,255,.6); border-radius:12px; border:1px solid var(--cloud-border);
+    }
+    .sr-info { flex:1; }
+    .sr-name { font-size:14px; font-weight:800; }
+    .sr-members { font-size:12px; color:var(--text-muted); font-weight:600; margin-top:2px; }
+    .roster-form {
+      background:rgba(196,181,253,.12); border-radius:13px; padding:14px;
+      border:1px solid rgba(139,92,246,.15); display:flex; flex-direction:column; gap:11px; animation:floatIn .18s ease;
+    }
+    .check-list { display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; }
+    .check-item {
+      display:flex; align-items:center; gap:9px; padding:8px 10px;
+      background:rgba(255,255,255,.65); border-radius:9px; cursor:pointer; user-select:none;
+    }
+    .check-item input[type=checkbox] { width:16px; height:16px; accent-color:var(--primary); cursor:pointer; flex-shrink:0; }
+    .check-label { font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; }
+    .block-switcher { display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+    .block-switcher::-webkit-scrollbar { display:none; }
+    .block-pill {
+      padding:7px 15px; border-radius:100px; border:1.5px solid var(--cloud-border);
+      background:rgba(255,255,255,.6); cursor:pointer; font-size:13px; font-weight:700;
+      color:var(--text-muted); white-space:nowrap; flex-shrink:0; transition:all .15s;
+    }
+    .block-pill.active {
+      background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;
+      border-color:transparent; box-shadow:0 3px 12px rgba(124,58,237,.3);
+    }
+    .p-bar { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+    .p-chip {
+      display:flex; align-items:center; gap:5px; padding:5px 8px 5px 7px;
+      background:rgba(255,255,255,.72); border:1.5px solid var(--cloud-border); border-radius:100px;
+      font-size:13px; font-weight:700; color:var(--text);
+    }
+    .p-chip-emoji { font-size:16px; line-height:1; }
+    .p-chip-x { color:var(--text-muted); font-size:11px; cursor:pointer; line-height:1; margin-left:1px; transition:color .1s; }
+    .p-chip-x:hover { color:var(--danger); }
+    .p-add-sel {
+      font-size:12px; padding:5px 10px; border-radius:100px;
+      border:1.5px dashed rgba(139,92,246,.3); background:rgba(255,255,255,.5);
+      color:var(--primary); cursor:pointer; outline:none; font-weight:700;
+    }
+    .rotation-card {
+      background:rgba(255,255,255,.72); border-radius:15px; border:1px solid var(--cloud-border);
+      overflow:hidden; box-shadow:0 2px 10px rgba(109,40,217,.05);
+    }
+    .rotation-header { padding:12px 14px; display:flex; align-items:center; gap:10px; }
+    .rotation-num {
+      width:30px; height:30px; border-radius:50%;
+      background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white;
+      display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; flex-shrink:0;
+    }
+    .rotation-info { flex:1; }
+    .rotation-title { font-size:14px; font-weight:700; }
+    .rotation-sub { font-size:11px; color:var(--text-muted); font-weight:600; margin-top:1px; }
+    .rotation-badge {
+      background:rgba(196,181,253,.4); color:var(--primary-dark); border-radius:100px;
+      padding:3px 10px; font-size:11px; font-weight:800; flex-shrink:0;
+    }
+    .rotation-body { padding:0 14px 13px; }
+    .chips { display:flex; flex-wrap:wrap; gap:7px; }
+    .chip {
+      padding:6px 14px; border-radius:100px; border:1.5px solid rgba(139,92,246,.22);
+      background:rgba(255,255,255,.6); cursor:pointer; font-size:13px; font-weight:700;
+      color:var(--text-muted); transition:all .15s; user-select:none; display:flex; align-items:center; gap:5px;
+    }
+    .chip:active { transform:scale(.93); }
+    .chip.on { background:linear-gradient(135deg,var(--primary),var(--secondary)); border-color:transparent; color:white; box-shadow:0 2px 8px rgba(124,58,237,.28); }
+    .chip-emoji { font-size:15px; }
+    .summary-table { width:100%; border-collapse:collapse; }
+    .summary-table th { text-align:left; font-size:10px; font-weight:900; color:var(--text-muted); text-transform:uppercase; letter-spacing:.8px; padding:0 10px 10px; }
+    .summary-table th:last-child { text-align:right; }
+    .summary-table td { padding:10px 10px; border-top:1px solid rgba(139,92,246,.09); font-size:13px; vertical-align:middle; }
+    .summary-table td:last-child { text-align:right; font-weight:800; }
+    .col-muted{color:var(--text-muted)} .col-pos{color:var(--success)} .col-neg{color:var(--danger)} .col-zero{color:var(--text-muted)}
+    .sum-total td { border-top:2px solid rgba(139,92,246,.18); font-weight:900; font-size:14px; background:rgba(196,181,253,.12); }
+    .txn-list { display:flex; flex-direction:column; gap:8px; }
+    .txn-card { display:flex; align-items:center; gap:9px; padding:11px 13px; background:rgba(255,255,255,.6); border-radius:13px; border:1px solid var(--cloud-border); }
+    .txn-name { font-size:14px; font-weight:700; }
+    .txn-arrow { color:var(--primary); font-size:16px; flex-shrink:0; }
+    .txn-amount { margin-left:auto; font-weight:900; color:var(--secondary); font-size:15px; }
+    .accordion { overflow:hidden; }
+    .accordion-header {
+      display:flex; align-items:center; justify-content:space-between; padding:14px 18px;
+      cursor:pointer; user-select:none; background:rgba(255,255,255,.35); transition:background .15s;
+    }
+    .accordion-header:hover { background:rgba(255,255,255,.55); }
+    .accordion-title { font-size:14px; font-weight:800; }
+    .accordion-sub { font-size:11px; color:var(--text-muted); font-weight:600; margin-top:2px; }
+    .accordion-chevron { font-size:18px; color:var(--text-muted); transition:transform .2s; }
+    .accordion-body { display:none; padding:4px 18px 14px; }
+    .accordion.open .accordion-body { display:block; }
+    .accordion.open .accordion-chevron { transform:rotate(180deg); }
+    .payer-rows { display:flex; flex-direction:column; gap:7px; margin-bottom:8px; }
+    .payer-row { display:flex; gap:7px; align-items:center; }
+    .payer-row select { flex:0 0 50%; min-width:0; }
+    .payer-row input { flex:1; min-width:44px; }
+    .payer-chip {
+      flex:0 0 50%; min-width:0; display:flex; align-items:center; gap:7px; padding:9px 12px;
+      background:linear-gradient(135deg,rgba(196,181,253,.3),rgba(251,207,232,.3));
+      border:1.5px solid var(--cloud-border); border-radius:11px; font-size:14px; font-weight:700; overflow:hidden;
+    }
+    .payer-chip-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .payer-chip-x { background:none; border:none; cursor:pointer; padding:0; font-size:13px; color:var(--text-muted); flex-shrink:0; line-height:1; }
+    .payer-chip-x:hover { color:var(--danger); }
+    .payer-meta { font-size:11px; font-weight:700; padding:6px 10px; border-radius:9px; text-align:center; }
+    .payer-meta.ok { background:rgba(5,150,105,.1); color:var(--success); }
+    .payer-meta.warn { background:rgba(239,68,68,.1); color:var(--danger); }
+    .payer-meta.info { background:rgba(139,92,246,.1); color:var(--primary); }
+    .empty { display:flex; flex-direction:column; align-items:center; padding:28px 16px; color:var(--text-muted); font-size:14px; text-align:center; gap:5px; }
+    .empty-icon { font-size:40px; }
+    .empty strong { color:var(--text); font-size:15px; }
+    .hint { font-size:12px; font-weight:600; color:var(--text-muted); background:rgba(255,255,255,.5); border-radius:12px; padding:10px 14px; border:1px solid var(--cloud-border); line-height:1.5; }
+    .warning { font-size:12px; font-weight:700; background:rgba(254,243,199,.85); color:#92400e; border-radius:12px; padding:10px 14px; border:1px solid #fcd34d; line-height:1.5; }
+    .divider { height:1px; background:rgba(139,92,246,.1); }
+    .person-cell { display:flex; align-items:center; gap:8px; }
+    .badge { display:inline-block; font-size:10px; font-weight:800; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; border-radius:100px; padding:2px 7px; margin-left:5px; }
+    .bstat-info { font-size:12px; font-weight:700; color:var(--text-muted); background:rgba(139,92,246,.07); border:1px solid rgba(139,92,246,.13); border-radius:9px; padding:8px 12px; line-height:1.6; }
+    .payer-fill-btn {
+      flex-shrink:0; padding:6px 8px; border-radius:7px; border:1.5px solid var(--cloud-border);
+      background:rgba(255,255,255,.75); color:var(--primary); font-size:11px; font-weight:800;
+      cursor:pointer; white-space:nowrap; line-height:1; transition:all .15s;
+    }
+    .payer-fill-btn:hover { background:rgba(196,181,253,.35); border-color:var(--primary); }
+    .payer-fill-btn:active { transform:scale(.93); }
+    .modal-overlay {
+      position:fixed; inset:0; z-index:200; background:rgba(30,27,75,.5); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .modal-box {
+      background:rgba(255,255,255,.97); border-radius:20px; padding:22px; width:100%; max-width:340px;
+      box-shadow:0 20px 60px rgba(30,27,75,.3); border:1px solid var(--cloud-border);
+    }
+    .modal-title { font-size:16px; font-weight:900; color:var(--text); margin-bottom:16px; }
+    .rot-copy-bar { display:flex; gap:4px; margin-left:auto; flex-shrink:0; }
+    .rot-copy-btn {
+      padding:4px 7px; border-radius:7px; border:1.5px solid var(--cloud-border);
+      background:rgba(255,255,255,.75); color:var(--primary); font-size:11px; font-weight:800;
+      cursor:pointer; white-space:nowrap; transition:all .15s; line-height:1.4;
+    }
+    .rot-copy-btn:hover { background:rgba(196,181,253,.35); border-color:var(--primary); }
+    .rot-copy-btn:active { transform:scale(.93); }
+    .toast {
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
+      background:var(--text); color:white; padding:10px 20px; border-radius:100px;
+      font-size:13px; font-weight:700; opacity:0; transition:opacity .2s,transform .2s;
+      pointer-events:none; white-space:nowrap; z-index:999;
+      box-shadow:0 4px 16px rgba(30,27,75,.28);
+    }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .sync-dot {
+      width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,.5);
+      flex-shrink:0; transition:background .3s;
+    }
+    .sync-dot.syncing { background:#fbbf24; animation:spin .8s linear infinite; border-radius:0; width:8px; height:8px; clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+    .sync-dot.saved { background:#34d399; }
+    .sync-dot.error { background:#f87171; }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOADING ══ -->
+<div id="screen-loading" class="loading-screen">
+  <div class="loading-unicorn">🦄</div>
+  <div class="loading-text">Loading HuckTime…</div>
+</div>
+
+<!-- ══ AUTH ══ -->
+<div id="screen-auth" style="display:none">
+  <div class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-title">HuckTime ✦</div>
+      <div class="auth-sub">Wind tunnel time sharing cost calculator</div>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login" onclick="setAuthMode('login')">Log In</button>
+        <button class="auth-tab" id="tab-signup" onclick="setAuthMode('signup')">Sign Up</button>
+      </div>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password" />
+      </div>
+      <div class="field" id="auth-confirm-wrapper" style="display:none;margin-bottom:12px">
+        <label>Confirm Password</label>
+        <input type="password" id="auth-confirm" placeholder="Confirm password" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-primary btn-full" id="auth-submit-btn" onclick="doAuth()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HOME ══ -->
+<div id="screen-home" style="display:none">
+  <div class="home-screen">
+    <div class="home-header">
+      <div>
+        <h1>HuckTime ✦</h1>
+        <div class="home-user" id="home-user-email"></div>
+      </div>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1.5px solid rgba(255,255,255,.3);font-size:12px" onclick="doLogout()">Log out</button>
+    </div>
+    <div class="home-body">
+      <button class="btn btn-primary btn-full" style="padding:18px;font-size:16px;border-radius:16px" onclick="createNewHuck()">✦ New Huck</button>
+      <div class="card">
+        <div class="card-title">Open by PIN</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="pin-input" placeholder="e.g. ABC123" maxlength="6"
+            style="flex:1;padding:10px 12px;border:1.5px solid rgba(139,92,246,.2);border-radius:11px;font-size:16px;font-weight:800;letter-spacing:2px;text-transform:uppercase;font-family:monospace;outline:none;background:rgba(255,255,255,.75);color:var(--text)"
+            oninput="formatPinInput(this)" onkeydown="if(event.key==='Enter')openByPin()" />
+          <button class="btn btn-primary" onclick="openByPin()">Open</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Saved Hucks</div>
+        <div id="saved-hucks-list">
+          <div class="empty" style="padding:12px 0 8px">
+            <div class="empty-icon">🌬️</div>
+            <strong>No saved hucks yet</strong>
+            <span>Create a huck then tap Save to keep it.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HUCK ══ -->
+<div id="screen-huck" style="display:none">
+  <div class="sky-canvas" id="sky-canvas">
+    <svg class="wind-svg" id="wind-svg" viewBox="0 0 480 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <header class="app-header">
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1.5px solid rgba(255,255,255,.3);font-size:12px;padding:7px 11px" onclick="goHome()">← Home</button>
+    <div class="header-center">
+      <div class="header-title">HuckTime ✦</div>
+      <div class="pin-badge" onclick="copyPin()">
+        <span id="huck-pin-display">---</span>
+        <span style="font-size:10px;opacity:.7">📋</span>
+        <div class="sync-dot" id="sync-dot"></div>
+      </div>
+    </div>
+    <button class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;border:1.5px solid rgba(255,255,255,.3);font-size:12px;padding:7px 11px" onclick="saveHuck()">Save ✦</button>
+  </header>
+
+  <main class="main">
+    <section id="sec-blocks" class="section active">
+      <div id="blocks-list"></div>
+      <button class="add-block-btn" onclick="addBlock()"><span style="font-size:18px">✦</span> Add New Block</button>
+      <div class="hint">💨 Each block is an independent session. Set who paid, then head to <strong>Rotations</strong> to assign participants.</div>
+    </section>
+
+    <section id="sec-roster" class="section">
+      <div class="card">
+        <div class="card-title">Add Participant</div>
+        <div class="add-row">
+          <div class="field">
+            <input type="text" id="roster-input" placeholder="Enter name…" maxlength="30" autocomplete="off" />
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addPerson()">Add</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title" id="roster-title">Participants (0 / 100)</div>
+        <div id="roster-list"></div>
+      </div>
+      <div class="card" id="saved-rosters-card" style="display:none">
+        <div class="card-title">Saved Rosters</div>
+        <div id="saved-rosters-content"></div>
+      </div>
+    </section>
+
+    <section id="sec-rotations" class="section">
+      <div class="card">
+        <div class="card-title">Active Block</div>
+        <div class="block-switcher" id="block-switcher"></div>
+      </div>
+      <div class="card" id="rot-participants-card">
+        <div class="card-title">Block Participants</div>
+        <div id="rot-participants-content"><span style="font-size:13px;color:var(--text-muted);font-weight:600;">Select a block above.</span></div>
+      </div>
+      <div id="rotations-content"></div>
+    </section>
+
+    <section id="sec-summary" class="section">
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-ghost btn-sm" style="font-size:12px;padding:6px 11px" onclick="openPDFModal()">📄 Export PDF</button>
+      </div>
+      <div id="summary-content"></div>
+    </section>
+  </main>
+
+  <nav class="nav">
+    <button class="nav-btn active" data-tab="blocks" onclick="switchTab('blocks')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/></svg>
+      Blocks<div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="roster" onclick="switchTab('roster')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Roster<div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="rotations" onclick="switchTab('rotations')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Rotations<div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" data-tab="summary" onclick="switchTab('summary')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+      Summary<div class="nav-dot"></div>
+    </button>
+  </nav>
+
+  <div id="pdf-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closePDFModal()">
+    <div class="modal-box">
+      <div class="modal-title">📄 Export PDF</div>
+      <div class="field">
+        <label>Select Date</label>
+        <input type="date" id="pdf-date-input" />
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);font-weight:600;margin-top:8px;line-height:1.5;">All blocks on the selected date will be included.</p>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-primary" style="flex:1" onclick="doPDFExport()">📄 Export</button>
+        <button class="btn btn-ghost" onclick="closePDFModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   FIREBASE INIT
+═══════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAgXERtzT4_J6zQT8Ah6B7wrdFYF_b2LI0",
+  authDomain: "hucktime.firebaseapp.com",
+  projectId: "hucktime",
+  storageBucket: "hucktime.firebasestorage.app",
+  messagingSenderId: "173491139659",
+  appId: "1:173491139659:web:40d1f7b72e33503c6749ce"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ═══════════════════════════════════════════════════════
+   GLOBAL STATE
+═══════════════════════════════════════════════════════ */
+let currentUser    = null;
+let currentHuckId  = null;
+let huckListener   = null;
+let saveTimer      = null;
+let isApplyingRemote = false;
+let authMode       = 'login';
+let currentTab     = 'blocks';
+
+let state = {
+  roster:        [],
+  blocks:        [],
+  currentBlockId: null,
+};
+
+let userSavedRosters = [];
+
+let rosterFormState = null;
+let rosterEditId    = null;
+let copiedParticipants = null;
+
+/* ═══════════════════════════════════════════════════════
+   FLYING AVATARS
+═══════════════════════════════════════════════════════ */
+const FLYING = [
+  '🦅','🦜','🦢','🦆','🦉','🦩','🕊️','🦋','🐝','🦇',
+  '✈️','🚀','🛸','🎈','🚁','🪁','🦚','🐦','🌟','💫',
+  '⭐','🌠','☄️','🧚','🐉','🦄','🛩️','🪂','🦃','🦗',
+  '🦟','🐞','🌈','💨','🎆','🎇','🦸','🧙','🪲','🦤',
+  '🛰️','🌙','🪐','🔥','🌪️','🎐','🎏','🧨','🎠','🎡',
+];
+
+/* ═══════════════════════════════════════════════════════
+   SCREEN MANAGEMENT
+═══════════════════════════════════════════════════════ */
+function showScreen(name) {
+  ['loading','auth','home','huck'].forEach(id => {
+    const el = document.getElementById('screen-' + id);
+    if (el) el.style.display = 'none';
+  });
+  const target = document.getElementById('screen-' + name);
+  if (!target) return;
+  target.style.display = (name === 'huck') ? 'flex' : 'block';
+  if (name === 'huck') {
+    document.getElementById('screen-huck').style.flexDirection = 'column';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTH
+═══════════════════════════════════════════════════════ */
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+  document.getElementById('auth-confirm-wrapper').style.display = mode === 'signup' ? 'flex' : 'none';
+  document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Log In' : 'Sign Up';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function doAuth() {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const confirm  = document.getElementById('auth-confirm').value;
+  document.getElementById('auth-error').style.display = 'none';
+
+  if (!email || !password) { showAuthError('Please enter email and password.'); return; }
+
+  if (authMode === 'signup') {
+    if (password !== confirm) { showAuthError('Passwords do not match.'); return; }
+    if (password.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
+    try {
+      await auth.createUserWithEmailAndPassword(email, password);
+    } catch(e) {
+      showAuthError(friendlyAuthError(e));
+    }
+  } else {
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch(e) {
+      showAuthError(friendlyAuthError(e));
+    }
+  }
+}
+
+function friendlyAuthError(e) {
+  switch(e.code) {
+    case 'auth/user-not-found':       return 'No account found with that email.';
+    case 'auth/wrong-password':       return 'Incorrect password.';
+    case 'auth/email-already-in-use': return 'An account with that email already exists.';
+    case 'auth/invalid-email':        return 'Please enter a valid email address.';
+    case 'auth/weak-password':        return 'Password must be at least 6 characters.';
+    case 'auth/too-many-requests':    return 'Too many attempts. Please try again later.';
+    case 'auth/invalid-credential':   return 'Email or password is incorrect.';
+    default: return e.message || 'Authentication failed.';
+  }
+}
+
+async function doLogout() {
+  if (huckListener) { huckListener(); huckListener = null; }
+  currentHuckId = null;
+  userSavedRosters = [];
+  await auth.signOut();
+}
+
+/* ═══════════════════════════════════════════════════════
+   PIN
+═══════════════════════════════════════════════════════ */
+function generatePin() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function normalizePin(raw) {
+  const clean = raw.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6);
+  return clean.length === 6 ? clean : null;
+}
+
+function formatPinInput(input) {
+  input.value = input.value.replace(/[^A-Z0-9]/gi,'').toUpperCase().slice(0,6);
+}
+
+function copyPin() {
+  if (!currentHuckId) return;
+  navigator.clipboard.writeText(currentHuckId).then(() => showToast('📋 PIN copied!')).catch(() => {
+    showToast('PIN: ' + currentHuckId);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   FIRESTORE SAVE / SYNC
+═══════════════════════════════════════════════════════ */
+function setSyncState(s) {
+  const dot = document.getElementById('sync-dot');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (s ? ' ' + s : '');
+}
+
+function save() {
+  if (isApplyingRemote || !currentHuckId || !currentUser) {
+    console.log('save() skipped — isApplyingRemote:', isApplyingRemote, 'huckId:', currentHuckId, 'user:', !!currentUser);
+    return;
+  }
+  setSyncState('syncing');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    saveTimer = null;
+    console.log('Saving to Firestore, blocks:', state.blocks.length, 'roster:', state.roster.length);
+    try {
+      await db.collection('hucks').doc(currentHuckId).update({
+        stateJson: JSON.stringify(state),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log('Save succeeded');
+      setSyncState('saved');
+      setTimeout(() => setSyncState(''), 2000);
+    } catch(e) {
+      console.error('Save error:', e);
+      setSyncState('error');
+      showToast('⚠ Sync error — check connection');
+    }
+  }, 800);
+}
+
+function subscribeToHuck(huckId) {
+  if (huckListener) { huckListener(); huckListener = null; }
+  huckListener = db.collection('hucks').doc(huckId).onSnapshot(snap => {
+    if (!snap.exists) return;
+    if (saveTimer !== null) return; // local edit pending — skip
+    const data = snap.data();
+    if (!data || (!data.stateJson && !data.state)) return;
+    isApplyingRemote = true;
+    state = data.stateJson ? JSON.parse(data.stateJson) : data.state;
+    // Ensure arrays exist
+    state.roster        = state.roster        || [];
+    state.blocks        = state.blocks        || [];
+    state.blocks.forEach(b => {
+      b.payers         = b.payers         || [];
+      b.assignments    = b.assignments    || [];
+      b.localRosterIds = b.localRosterIds || [];
+      syncSlots(b);
+    });
+    renderAll();
+    isApplyingRemote = false;
+  }, err => {
+    console.error('Snapshot error:', err);
+    setSyncState('error');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   HOME SCREEN
+═══════════════════════════════════════════════════════ */
+async function loadSavedHucks() {
+  const el = document.getElementById('saved-hucks-list');
+  el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:12px">Loading…</div>';
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    const data = doc.exists ? doc.data() : {};
+    const hucks = (data.savedHucks || []).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+    if (!hucks.length) {
+      el.innerHTML = `<div class="empty" style="padding:12px 0 8px">
+        <div class="empty-icon">🌬️</div>
+        <strong>No saved hucks yet</strong>
+        <span>Create a huck then tap Save to keep it.</span>
+      </div>`;
+      return;
+    }
+
+    // Group by date
+    const byDate = {};
+    hucks.forEach(h => {
+      const d = h.date || 'undated';
+      if (!byDate[d]) byDate[d] = [];
+      byDate[d].push(h);
+    });
+    const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+
+    let html = '';
+    dates.forEach(d => {
+      html += `<div class="huck-date-group">
+        <div class="huck-date-label">📅 ${d === 'undated' ? 'No date' : fmtDateLabel(d)}</div>`;
+      byDate[d].forEach(h => {
+        html += `<div class="huck-item">
+          <div class="huck-item-icon" onclick="openHuckByPin('${h.pin}')" style="cursor:pointer">🥏</div>
+          <div class="huck-item-info" onclick="openHuckByPin('${h.pin}')" style="cursor:pointer">
+            <div class="huck-item-name">${esc(h.name || 'Huck')}</div>
+            <div class="huck-item-pin">${h.pin}</div>
+          </div>
+          <button onclick="removeHuckFromSaved('${h.pin}')" title="Remove from saved"
+            style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted);padding:4px;line-height:1;flex-shrink:0;"
+            onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--text-muted)'">🗑️</button>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    el.innerHTML = html;
+  } catch(e) {
+    console.error('Load saved hucks error:', e);
+    el.innerHTML = `<div style="font-size:13px;color:var(--danger);text-align:center;padding:12px">Could not load hucks. Check connection.</div>`;
+  }
+}
+
+async function createNewHuck() {
+  if (!currentUser) return;
+  const pin = generatePin();
+  const date = todayISO();
+  showToast('Creating huck…');
+  try {
+    const initialState = {
+      roster: [],
+      blocks: [makeBlock()],
+      currentBlockId: null,
+    };
+    initialState.currentBlockId = initialState.blocks[0].id;
+
+    await db.collection('hucks').doc(pin).set({
+      pin,
+      date,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy: currentUser.uid,
+      stateJson: JSON.stringify(initialState),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+
+    enterHuck(pin, initialState);
+  } catch(e) {
+    console.error('Create huck error:', e);
+    showToast('⚠ Failed to create huck. Check connection.');
+  }
+}
+
+async function openByPin() {
+  const raw = document.getElementById('pin-input').value;
+  const pin = normalizePin(raw);
+  if (!pin) { showToast('Enter a valid 6-character PIN'); return; }
+  await openHuckByPin(pin);
+}
+
+async function openHuckByPin(pin) {
+  showToast('Opening huck…');
+  try {
+    const doc = await db.collection('hucks').doc(pin).get();
+    if (!doc.exists) { showToast('❌ PIN not found'); return; }
+    const data = doc.data();
+    const loaded = data.stateJson ? JSON.parse(data.stateJson) : (data.state || {});
+    enterHuck(pin, loaded);
+  } catch(e) {
+    console.error('Open huck error:', e);
+    showToast('⚠ Could not open huck. Check connection.');
+  }
+}
+
+function enterHuck(pin, huckState) {
+  currentHuckId = pin;
+
+  // Set state
+  state = huckState;
+  state.roster        = state.roster        || [];
+  state.blocks        = state.blocks        || [];
+  if (!state.blocks.length) {
+    const b = makeBlock();
+    state.blocks.push(b);
+    state.currentBlockId = b.id;
+  }
+  if (!state.currentBlockId) state.currentBlockId = state.blocks[0]?.id || null;
+  state.blocks.forEach(b => {
+    b.payers         = b.payers         || [];
+    b.assignments    = b.assignments    || [];
+    b.localRosterIds = b.localRosterIds || [];
+    syncSlots(b);
+  });
+
+  // Update UI
+  document.getElementById('huck-pin-display').textContent = pin;
+  document.getElementById('pin-input').value = '';
+  showScreen('huck');
+  switchTab('blocks');
+  subscribeToHuck(pin);
+  loadUserSavedRosters();
+  setSyncState('saved');
+  initSky();
+}
+
+async function goHome() {
+  // Flush any pending debounced save before leaving
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  if (currentHuckId && currentUser && !isApplyingRemote) {
+    try {
+      await db.collection('hucks').doc(currentHuckId).update({
+        stateJson: JSON.stringify(state),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch(e) { console.error('Final save error:', e); }
+  }
+  if (huckListener) { huckListener(); huckListener = null; }
+  currentHuckId = null;
+  showScreen('home');
+  loadSavedHucks();
+}
+
+async function saveHuck() {
+  if (!currentUser || !currentHuckId) return;
+  // Flush any pending debounced save first
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  try {
+    await db.collection('hucks').doc(currentHuckId).update({
+      stateJson: JSON.stringify(state),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch(e) { console.error('Pre-save flush error:', e); }
+  try {
+    const huckDoc = await db.collection('hucks').doc(currentHuckId).get();
+    const huckData = huckDoc.exists ? huckDoc.data() : {};
+    const name = state.blocks[0]?.name || ('Huck ' + todayISO());
+    const date = huckData.date || todayISO();
+
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    const existing = userDoc.exists ? (userDoc.data().savedHucks || []) : [];
+
+    // Dedupe by pin
+    const filtered = existing.filter(h => h.pin !== currentHuckId);
+    filtered.unshift({ pin: currentHuckId, date, name, savedAt: new Date().toISOString() });
+
+    await userRef.set({ savedHucks: filtered }, { merge: true });
+    showToast('✦ Huck saved!');
+  } catch(e) {
+    console.error('Save huck error:', e);
+    showToast('⚠ Could not save huck');
+  }
+}
+
+async function loadUserSavedRosters() {
+  if (!currentUser) return;
+  try {
+    const userDoc = await db.collection('users').doc(currentUser.uid).get();
+    userSavedRosters = (userDoc.exists ? userDoc.data().savedRosters : null) || [];
+  } catch(e) {
+    console.error('Load saved rosters error:', e);
+    userSavedRosters = [];
+  }
+  if (currentTab === 'roster') renderSavedRosters();
+}
+
+async function saveUserSavedRosters() {
+  if (!currentUser) return;
+  try {
+    await db.collection('users').doc(currentUser.uid).set(
+      { savedRosters: userSavedRosters }, { merge: true }
+    );
+  } catch(e) {
+    console.error('Save user rosters error:', e);
+    showToast('⚠ Could not save roster');
+  }
+}
+
+async function removeHuckFromSaved(pin) {
+  if (!currentUser) return;
+  try {
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const userDoc = await userRef.get();
+    const existing = userDoc.exists ? (userDoc.data().savedHucks || []) : [];
+    const filtered = existing.filter(h => h.pin !== pin);
+    await userRef.set({ savedHucks: filtered }, { merge: true });
+    loadSavedHucks();
+  } catch(e) {
+    console.error('Remove huck error:', e);
+    showToast('⚠ Could not remove huck');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════ */
+function genId()     { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
+function initials(n) { return n.trim().split(/\s+/).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+function todayISO()  { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function esc(s)      { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtN(n)     { return n%1===0 ? n.toFixed(0) : n.toFixed(2); }
+function fmtTime(m)  { const mn=Math.floor(m),s=Math.round((m-mn)*60); return `${mn}:${String(s).padStart(2,'0')}`; }
+function fmtM(n)     { return '$'+n.toFixed(2); }
+function fmtDateLabel(isoDate) {
+  if (!isoDate) return 'No date';
+  const [y,m,d] = isoDate.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+}
+
+function assignAvatar() {
+  const used = new Set(state.roster.map(p => p.avatar).filter(Boolean));
+  return FLYING.find(a => !used.has(a)) || FLYING[state.roster.length % FLYING.length];
+}
+function avHtml(p, sm=false) {
+  if (p.avatar) return `<div class="avatar${sm?' sm':''} emoji-av">${p.avatar}</div>`;
+  return `<div class="avatar${sm?' sm':''}">${initials(p.name)}</div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BLOCK HELPERS
+═══════════════════════════════════════════════════════ */
+function getBlock(id)      { return state.blocks.find(b => b.id === id); }
+function getCurrentBlock() { return getBlock(state.currentBlockId); }
+
+function makeBlock() {
+  return {
+    id: genId(), name: 'Block ' + (state.blocks.length + 1),
+    date: todayISO(), costPerMinute: 15.00, blockTime: 6, numRotations: 5,
+    payers: [], assignments: [], localRosterIds: [],
+  };
+}
+
+function blockDur(b)          { return b.numRotations > 0 ? b.blockTime / b.numRotations : 0; }
+function totalPayerMinutes(b) { return (b.payers||[]).reduce((s,p) => s + (parseFloat(p.minutes)||0), 0); }
+function blockAmountPaid(b, personId) {
+  return (b.payers||[]).filter(p => p.personId === personId).reduce((s,p) => s + (parseFloat(p.minutes)||0) * b.costPerMinute, 0);
+}
+function blockTotal(b)   { return b.blockTime * b.costPerMinute; }
+function blockRotCost(b) { return blockDur(b) * b.costPerMinute; }
+
+function syncSlots(b) {
+  while (b.assignments.length < b.numRotations) b.assignments.push([]);
+}
+
+function getBlockRoster(b) {
+  if (b.localRosterIds && b.localRosterIds.length > 0)
+    return b.localRosterIds.map(id => state.roster.find(p => p.id === id)).filter(Boolean);
+  return [...state.roster];
+}
+
+/* ═══════════════════════════════════════════════════════
+   CALCULATIONS
+═══════════════════════════════════════════════════════ */
+function calcBlockSummary(b) {
+  const dur = blockDur(b);
+  const map = {};
+  state.roster.forEach(p => { map[p.id] = {id:p.id,name:p.name,avatar:p.avatar,minutes:0,cost:0}; });
+  for (let i = 0; i < b.numRotations; i++) {
+    const pts = (b.assignments[i]||[]).filter(pid => map[pid]);
+    if (!pts.length) continue;
+    const share = (dur * b.costPerMinute) / pts.length;
+    pts.forEach(pid => { map[pid].minutes += dur; map[pid].cost += share; });
+  }
+  return Object.values(map);
+}
+
+function calcGlobal() {
+  const map = {};
+  state.roster.forEach(p => { map[p.id] = {id:p.id,name:p.name,avatar:p.avatar,totalOwed:0,totalPaid:0}; });
+  state.blocks.forEach(b => {
+    (b.payers||[]).forEach(py => { if (map[py.personId]) map[py.personId].totalPaid += (parseFloat(py.minutes)||0) * b.costPerMinute; });
+    calcBlockSummary(b).forEach(r => { if (map[r.id]) map[r.id].totalOwed += r.cost; });
+  });
+  return Object.values(map).map(r => ({...r, net: r.totalPaid - r.totalOwed}));
+}
+
+function calcSettlement(rows) {
+  const creds = rows.filter(r=>r.net>0.005).map(r=>({...r,rem:r.net}));
+  const debts  = rows.filter(r=>r.net<-0.005).map(r=>({...r,rem:-r.net}));
+  creds.sort((a,b)=>b.rem-a.rem); debts.sort((a,b)=>b.rem-a.rem);
+  const txns = [];
+  let ci=0,di=0;
+  while (ci<creds.length && di<debts.length) {
+    const amt = Math.min(creds[ci].rem, debts[di].rem);
+    if (amt>0.005) txns.push({from:debts[di],to:creds[ci],amount:amt});
+    creds[ci].rem -= amt; debts[di].rem -= amt;
+    if (creds[ci].rem<0.005) ci++;
+    if (debts[di].rem<0.005) di++;
+  }
+  return txns;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════════ */
+function switchTab(tab) {
+  document.querySelectorAll('#screen-huck .section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('#screen-huck .nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  const btn = document.querySelector(`#screen-huck [data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+  currentTab = tab;
+  if (tab === 'blocks')    renderBlocks();
+  if (tab === 'roster')    { renderRoster(); renderSavedRosters(); }
+  if (tab === 'rotations') renderRotationsTab();
+  if (tab === 'summary')   renderSummary();
+}
+
+function renderAll() {
+  if (!currentHuckId) return;
+  if (currentTab === 'blocks')    renderBlocks();
+  if (currentTab === 'roster')    { renderRoster(); renderSavedRosters(); }
+  if (currentTab === 'rotations') renderRotationsTab();
+  if (currentTab === 'summary')   renderSummary();
+}
+
+/* ═══════════════════════════════════════════════════════
+   BLOCKS TAB
+═══════════════════════════════════════════════════════ */
+function addBlock() {
+  const b = makeBlock();
+  state.blocks.push(b);
+  if (!state.currentBlockId) state.currentBlockId = b.id;
+  save();
+  renderBlocks();
+  setTimeout(() => { const el = document.getElementById('block-'+b.id); if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 80);
+}
+
+function deleteBlock(id) {
+  if (state.blocks.length <= 1) { showToast('Need at least one block 💨'); return; }
+  state.blocks = state.blocks.filter(b => b.id !== id);
+  if (state.currentBlockId === id) state.currentBlockId = state.blocks[0]?.id || null;
+  save(); renderBlocks();
+}
+
+function onBlockInput(id, field, value) {
+  const b = getBlock(id); if (!b) return;
+  if      (field==='name') b.name = value || 'Block';
+  else if (field==='cpm')  { const v=parseFloat(value); if(!isNaN(v)&&v>=0) b.costPerMinute=v; }
+  else if (field==='time') { const v=parseInt(value);   if(!isNaN(v)&&v>=1) b.blockTime=v; }
+  else if (field==='rots') { const v=parseInt(value);   if(!isNaN(v)&&v>=1&&v<=50) { b.numRotations=v; syncSlots(b); } }
+  else if (field==='date') b.date = value || todayISO();
+  save();
+  if (field !== 'name') refreshBlockStat(id);
+  if (field === 'time' || field === 'cpm') updatePayerMeta(id);
+}
+
+function refreshBlockStat(id) {
+  const b = getBlock(id); const el = document.getElementById('bstat-'+id);
+  if (!b || !el) return;
+  el.textContent = `${fmtTime(blockDur(b))} min/rotation · ${fmtM(blockRotCost(b))}/rotation · ${fmtM(blockTotal(b))} total`;
+}
+
+function personOptions(selectedId, disabledIds=[]) {
+  const sorted = [...state.roster].sort((a,b)=>a.name.localeCompare(b.name));
+  return `<option value="">— Select person —</option>` +
+    sorted.map(p=>`<option value="${p.id}" ${p.id===selectedId?'selected':''} ${disabledIds.includes(p.id)&&p.id!==selectedId?'disabled':''}>${p.avatar?p.avatar+' ':''}${esc(p.name)}</option>`).join('');
+}
+
+function renderPayerSection(b) {
+  const payers=b.payers||[]; const usedIds=payers.map(p=>p.personId).filter(Boolean);
+  const paidMin=totalPayerMinutes(b); const diff=paidMin-b.blockTime;
+  const metaCls=Math.abs(diff)<0.01?'ok':diff>0?'warn':'info';
+  const metaTxt=Math.abs(diff)<0.01?`✓ Fully covered (${fmtN(paidMin)} / ${fmtN(b.blockTime)} min)`:diff>0?`⚠ Over by ${fmtN(diff)} min (${fmtN(paidMin)} / ${fmtN(b.blockTime)})`:
+    `${fmtN(b.blockTime-paidMin)} min unaccounted (${fmtN(paidMin)} / ${fmtN(b.blockTime)})`;
+  const rows = payers.map((py,i) => {
+    const person = py.personId ? state.roster.find(p=>p.id===py.personId) : null;
+    const personPicker = person
+      ? `<div class="payer-chip"><span style="font-size:18px;flex-shrink:0">${person.avatar||''}</span><span class="payer-chip-name">${esc(person.name)}</span><button class="payer-chip-x" onclick="clearPayer('${b.id}',${i})">✕</button></div>`
+      : `<select onchange="selectPayer('${b.id}',${i},this.value)">${personOptions('',usedIds)}</select>`;
+    return `<div class="payer-row">${personPicker}<input type="number" min="0" step="0.5" placeholder="min" value="${py.minutes||''}" oninput="updatePayer('${b.id}',${i},'minutes',this.value)" />
+      <button class="payer-fill-btn" onclick="fillPayerBlock('${b.id}',${i})" title="Fill entire block time">All</button>
+      <button class="block-del-btn" style="background:rgba(239,68,68,.15);color:var(--danger);border-color:rgba(239,68,68,.3);" onclick="removePayer('${b.id}',${i})">✕</button></div>`;
+  }).join('');
+  const addBtn = payers.length < 20 ? `<button class="btn btn-wind btn-sm" onclick="addPayer('${b.id}')">+ Add Payer</button>` : '';
+  return `<div class="field"><label>💳 Who Paid? (up to 20)</label><div class="payer-rows">${rows}</div>${addBtn}${paidMin>0?`<div class="payer-meta ${metaCls}" style="margin-top:7px">${metaTxt}</div>`:''}</div>`;
+}
+
+function addPayer(blockId) {
+  const b=getBlock(blockId); if(!b||b.payers.length>=20) return;
+  b.payers.push({personId:'',minutes:''}); save(); rerenderPayerSection(blockId);
+}
+function removePayer(blockId,idx) {
+  const b=getBlock(blockId); if(!b) return;
+  b.payers.splice(idx,1); save(); rerenderPayerSection(blockId);
+}
+function rerenderPayerSection(blockId) {
+  const b=getBlock(blockId); const el=document.getElementById(`payer-section-${blockId}`);
+  if(!el||!b) return; el.innerHTML=renderPayerSection(b);
+}
+function selectPayer(blockId,idx,personId) {
+  if(!personId) return; const b=getBlock(blockId); if(!b||!b.payers[idx]) return;
+  b.payers[idx].personId=personId; save(); rerenderPayerSection(blockId);
+}
+function clearPayer(blockId,idx) {
+  const b=getBlock(blockId); if(!b||!b.payers[idx]) return;
+  b.payers[idx].personId=''; save(); rerenderPayerSection(blockId);
+}
+function updatePayer(blockId,idx,field,value) {
+  const b=getBlock(blockId); if(!b||!b.payers[idx]) return;
+  b.payers[idx].minutes=value===''?'':parseFloat(value)||0; save(); refreshBlockStat(blockId); updatePayerMeta(blockId);
+}
+function fillPayerBlock(blockId,idx) {
+  const b=getBlock(blockId); if(!b||!b.payers[idx]) return;
+  b.payers[idx].minutes=b.blockTime; b.payers.forEach((p,i)=>{if(i!==idx)p.minutes='';}); save(); rerenderPayerSection(blockId); refreshBlockStat(blockId);
+}
+function updatePayerMeta(blockId) {
+  const b=getBlock(blockId); const section=document.getElementById(`payer-section-${blockId}`);
+  if(!b||!section) return; const fieldEl=section.querySelector('.field'); if(!fieldEl) return;
+  const paidMin=totalPayerMinutes(b); let metaEl=section.querySelector('.payer-meta');
+  if(paidMin<=0){if(metaEl)metaEl.remove();return;}
+  const diff=paidMin-b.blockTime;
+  const metaCls=Math.abs(diff)<0.01?'ok':diff>0?'warn':'info';
+  const metaTxt=Math.abs(diff)<0.01?`✓ Fully covered (${fmtN(paidMin)} / ${fmtN(b.blockTime)} min)`:diff>0?`⚠ Over by ${fmtN(diff)} min (${fmtN(paidMin)} / ${fmtN(b.blockTime)})`:
+    `${fmtN(b.blockTime-paidMin)} min unaccounted (${fmtN(paidMin)} / ${fmtN(b.blockTime)})`;
+  if(!metaEl){metaEl=document.createElement('div');metaEl.style.marginTop='7px';fieldEl.appendChild(metaEl);}
+  metaEl.className=`payer-meta ${metaCls}`; metaEl.textContent=metaTxt;
+}
+
+function renderBlocks() {
+  const el=document.getElementById('blocks-list');
+  if(!state.blocks.length){
+    el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">🌬️</div><strong>No blocks yet</strong><span>Add your first block below.</span></div></div>`;return;
+  }
+  el.innerHTML=state.blocks.map(b=>{
+    const dur=blockDur(b);
+    const stat=`${fmtTime(dur)} min/rotation · ${fmtM(blockRotCost(b))}/rotation · ${fmtM(blockTotal(b))} total`;
+    const rosterLabel=b.localRosterIds.length?`Custom (${b.localRosterIds.length} people)`:`Global roster (${state.roster.length} people)`;
+    const rosterDropdown=userSavedRosters.length?`<div class="field"><label>Load Saved Roster</label><div style="display:flex;gap:8px;"><select id="b-rsel-${b.id}" style="flex:1"><option value="">— Select roster —</option>${userSavedRosters.map(sr=>`<option value="${sr.id}">${esc(sr.name)} (${(sr.members||[]).length})</option>`).join('')}</select><button class="btn btn-wind btn-sm" onclick="applyRosterFromBlock('${b.id}')">Apply</button></div><span style="font-size:11px;color:var(--text-muted);font-weight:700;margin-top:2px;">Currently: ${rosterLabel}${b.localRosterIds.length?` · <a href="#" style="color:var(--primary);text-decoration:none;" onclick="resetBlockRoster('${b.id}');return false;">Reset to global</a>`:''}</span></div>`:'';
+    return `<div class="block-card" id="block-${b.id}">
+      <div class="block-header">
+        <input class="block-name-input" value="${esc(b.name)}" placeholder="Block name" oninput="onBlockInput('${b.id}','name',this.value)" />
+        <button class="block-del-btn" onclick="deleteBlock('${b.id}')" title="Delete">✕</button>
+      </div>
+      <div class="block-body">
+        <div class="field"><label>Date</label><input type="date" value="${b.date||todayISO()}" oninput="onBlockInput('${b.id}','date',this.value)" /></div>
+        <div class="field"><label>Cost per minute ($)</label><input type="number" min="0" step="0.01" value="${b.costPerMinute}" oninput="onBlockInput('${b.id}','cpm',this.value)" /></div>
+        <div class="field-row">
+          <div class="field"><label>Block time (min)</label><input type="number" min="1" step="1" value="${b.blockTime}" oninput="onBlockInput('${b.id}','time',this.value)" /></div>
+          <div class="field"><label>Rotations</label><input type="number" min="1" max="50" step="1" value="${b.numRotations}" oninput="onBlockInput('${b.id}','rots',this.value)" /></div>
+        </div>
+        <div class="bstat-info">📊&nbsp; <span id="bstat-${b.id}">${stat}</span></div>
+        <div id="payer-section-${b.id}">${renderPayerSection(b)}</div>
+        ${rosterDropdown}
+        <button class="btn btn-wind btn-full btn-sm" onclick="goToRotations('${b.id}')">↻ Set up Rotations →</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function goToRotations(blockId) { state.currentBlockId=blockId; save(); switchTab('rotations'); }
+function applyRosterFromBlock(blockId) {
+  const sel=document.getElementById(`b-rsel-${blockId}`);
+  if(!sel||!sel.value){showToast('Select a roster first');return;}
+  loadRosterToBlock(blockId,sel.value); showToast('✦ Roster applied!'); renderBlocks();
+}
+
+/* ═══════════════════════════════════════════════════════
+   ROSTER TAB
+═══════════════════════════════════════════════════════ */
+function addPersonToGlobal(name) {
+  name=(name||'').trim(); if(!name) return null;
+  if(state.roster.length>=100){showToast('Max 100 participants 🌬️');return null;}
+  if(state.roster.some(p=>p.name.toLowerCase()===name.toLowerCase())){showToast(`${name} is already on the roster!`);return null;}
+  const person={id:genId(),name,avatar:assignAvatar(),favorite:false}; state.roster.push(person); save(); return person;
+}
+function addPerson() {
+  const inp=document.getElementById('roster-input');
+  if(addPersonToGlobal(inp.value)){inp.value='';renderRoster();inp.focus();}
+}
+function removePerson(id) {
+  state.roster=state.roster.filter(p=>p.id!==id);
+  state.blocks.forEach(b=>{b.assignments=b.assignments.map(a=>a.filter(pid=>pid!==id));b.localRosterIds=(b.localRosterIds||[]).filter(pid=>pid!==id);b.payers=(b.payers||[]).filter(p=>p.personId!==id);});
+  save(); renderRoster();
+}
+function toggleFavorite(id){
+  const p=state.roster.find(r=>r.id===id);if(!p)return;
+  p.favorite=!p.favorite;save();renderRoster();
+}
+function renderRoster() {
+  document.getElementById('roster-title').textContent=`Participants (${state.roster.length} / 100)`;
+  const el=document.getElementById('roster-list');
+  if(!state.roster.length){el.innerHTML=`<div class="empty"><div class="empty-icon">👥</div><strong>No participants yet</strong><span>Add names above.</span></div>`;return;}
+  const sorted=[...state.roster].sort((a,b)=>{
+    if(!!a.favorite!==!!b.favorite)return a.favorite?-1:1;
+    return a.name.localeCompare(b.name);
+  });
+  el.innerHTML=`<div class="person-list">${sorted.map(p=>`<div class="person-item">${avHtml(p)}<span class="person-name">${esc(p.name)}</span><button class="fav-btn${p.favorite?' fav-on':''}" onclick="toggleFavorite('${p.id}')" title="${p.favorite?'Unfavorite':'Favorite'}">${p.favorite?'★':'☆'}</button><button class="remove-btn" onclick="removePerson('${p.id}')">✕</button></div>`).join('')}</div>`;
+}
+
+function renderSavedRosters() {
+  const card=document.getElementById('saved-rosters-card'); const content=document.getElementById('saved-rosters-content');
+  card.style.display='block'; let html='';
+  if(userSavedRosters.length){
+    html+=`<div class="sr-list" style="margin-bottom:12px">`;
+    const sortedSR=[...userSavedRosters].sort((a,b)=>a.name.localeCompare(b.name));
+    html+=sortedSR.map(sr=>{
+      const memberList=(sr.members||[]);
+      const resolved=memberList.map(m=>state.roster.find(p=>p.name===m.name)||{name:m.name,avatar:null});
+      const avatarStr=resolved.slice(0,6).map(p=>p.avatar||'🐦').join(' ');
+      return `<div class="sr-item"><div class="sr-info"><div class="sr-name">${esc(sr.name)}</div><div class="sr-members">${memberList.length} people · ${avatarStr}${memberList.length>6?'…':''}</div></div><div style="display:flex;gap:4px"><button class="btn btn-ghost btn-sm" style="font-size:14px;padding:5px 9px;" onclick="editSavedRoster('${sr.id}')" title="Edit">✏️</button><button class="btn btn-ghost btn-sm" style="font-size:17px;padding:5px 9px;" onclick="deleteSavedRoster('${sr.id}')" title="Delete">🗑️</button></div></div>`;
+    }).join('');
+    html+=`</div>`;
+  } else if(!rosterFormState){
+    html+=`<div class="empty" style="padding:12px 0 14px"><div class="empty-icon">📋</div><strong>No saved rosters yet</strong><span>Create one to reuse across hucks.</span></div>`;
+  }
+  if(rosterFormState){
+    const sortedCheckRoster=[...state.roster].sort((a,b)=>a.name.localeCompare(b.name));
+    const checkItems=sortedCheckRoster.map(p=>`<label class="check-item"><input type="checkbox" value="${p.id}" ${rosterFormState.selectedIds.includes(p.id)?'checked':''} onchange="toggleRosterCheck('${p.id}',this.checked)" /><span class="check-label">${p.avatar?`<span style="font-size:18px">${p.avatar}</span>`:''}${esc(p.name)}</span></label>`).join('');
+    const formTitle=rosterEditId?'Edit Roster':'New Roster'; const saveLabel=rosterEditId?'💾 Update Roster':'💾 Save Roster';
+    html+=`<div class="roster-form"><div style="font-weight:800;font-size:13px;color:var(--primary);margin-bottom:10px">${formTitle}</div>
+      <div class="field"><label>Roster Name</label><input type="text" id="rf-name" placeholder='e.g. "Tuesday Crew"' value="${esc(rosterFormState.name)}" oninput="rosterFormState.name=this.value" /></div>
+      ${state.roster.length?`<div class="field"><label>Select from Roster</label><div class="check-list">${checkItems}</div></div>`:''}
+      <div class="add-row" style="align-items:flex-end"><div class="field"><label>Add New Person</label><input type="text" id="rf-newperson" placeholder="Name…" maxlength="30" oninput="rosterFormState.newPersonName=this.value" value="${esc(rosterFormState.newPersonName||'')}" /></div><button class="btn btn-ghost btn-sm" onclick="addPersonFromRosterForm()">Add</button></div>
+      <div style="display:flex;gap:8px;margin-top:2px"><button class="btn btn-primary" style="flex:1" onclick="saveRosterForm()">${saveLabel}</button><button class="btn btn-ghost" onclick="cancelRosterForm()">Cancel</button></div>
+    </div>`;
+  } else {
+    html+=`<button class="btn btn-wind btn-full" onclick="openRosterForm()">✦ New Saved Roster</button>`;
+  }
+  content.innerHTML=html;
+}
+
+function openRosterForm(){rosterFormState={name:'',selectedIds:[],newPersonName:''};rosterEditId=null;renderSavedRosters();setTimeout(()=>document.getElementById('rf-name')?.focus(),50);}
+function editSavedRoster(id){
+  const sr=userSavedRosters.find(r=>r.id===id);if(!sr)return;
+  // Convert stored member names back to IDs for the form (names that exist in current roster)
+  const selectedIds=(sr.members||[]).map(m=>state.roster.find(p=>p.name===m.name)).filter(Boolean).map(p=>p.id);
+  rosterFormState={name:sr.name,selectedIds,newPersonName:''};rosterEditId=id;renderSavedRosters();setTimeout(()=>document.getElementById('rf-name')?.focus(),50);
+}
+function cancelRosterForm(){rosterFormState=null;rosterEditId=null;renderSavedRosters();}
+function toggleRosterCheck(id,checked){if(!rosterFormState)return;if(checked){if(!rosterFormState.selectedIds.includes(id))rosterFormState.selectedIds.push(id);}else{rosterFormState.selectedIds=rosterFormState.selectedIds.filter(x=>x!==id);}}
+function addPersonFromRosterForm(){if(!rosterFormState)return;const name=(document.getElementById('rf-newperson')?.value||rosterFormState.newPersonName||'').trim();const person=addPersonToGlobal(name);if(person){rosterFormState.selectedIds.push(person.id);rosterFormState.newPersonName='';renderRoster();renderSavedRosters();}}
+function saveRosterForm(){
+  if(!rosterFormState)return;
+  const name=(document.getElementById('rf-name')?.value||rosterFormState.name||'').trim();
+  if(!name){showToast('Give the roster a name!');return;}
+  if(!rosterFormState.selectedIds.length){showToast('Select at least one person');return;}
+  // Store members by name so they survive across different hucks
+  const members=rosterFormState.selectedIds.map(id=>state.roster.find(p=>p.id===id)).filter(Boolean).map(p=>({name:p.name}));
+  if(rosterEditId){const sr=userSavedRosters.find(r=>r.id===rosterEditId);if(sr){sr.name=name;sr.members=members;}showToast(`✦ "${name}" updated!`);}
+  else{userSavedRosters.push({id:genId(),name,members});showToast(`✦ "${name}" saved!`);}
+  saveUserSavedRosters();rosterFormState=null;rosterEditId=null;renderSavedRosters();
+}
+function deleteSavedRoster(id){userSavedRosters=userSavedRosters.filter(r=>r.id!==id);saveUserSavedRosters();renderSavedRosters();}
+
+function loadRosterToBlock(blockId,savedRosterId){
+  const b=getBlock(blockId);const sr=userSavedRosters.find(r=>r.id===savedRosterId);if(!b||!sr)return;
+  // Resolve members by name; auto-add anyone not in this huck's roster
+  const ids=(sr.members||[]).map(m=>{
+    let person=state.roster.find(p=>p.name===m.name);
+    if(!person)person=addPersonToGlobal(m.name);
+    return person?person.id:null;
+  }).filter(Boolean);
+  b.localRosterIds=ids;
+  b.assignments=b.assignments.map(a=>a.filter(pid=>ids.includes(pid)));save();
+}
+function removeFromBlockRoster(blockId,personId){
+  const b=getBlock(blockId);if(!b)return;
+  if(!b.localRosterIds.length)b.localRosterIds=state.roster.map(p=>p.id).filter(id=>id!==personId);
+  else b.localRosterIds=b.localRosterIds.filter(id=>id!==personId);
+  b.assignments=b.assignments.map(a=>a.filter(id=>id!==personId));save();renderRotationsTab();
+}
+function addToBlockRoster(blockId,personId){
+  const b=getBlock(blockId);if(!b||!b.localRosterIds.length)return;
+  if(!b.localRosterIds.includes(personId)){b.localRosterIds.push(personId);save();renderRotationsTab();}
+}
+function resetBlockRoster(blockId){
+  const b=getBlock(blockId);if(!b)return;b.localRosterIds=[];save();
+  if(currentTab==='rotations')renderRotationsTab();else renderBlocks();
+}
+
+/* ═══════════════════════════════════════════════════════
+   ROTATIONS TAB
+═══════════════════════════════════════════════════════ */
+function renderRotationsTab(){
+  const switcher=document.getElementById('block-switcher');const content=document.getElementById('rotations-content');
+  if(!state.blocks.length){switcher.innerHTML=`<span style="font-size:13px;color:var(--text-muted);font-weight:600;">No blocks yet</span>`;content.innerHTML='';document.getElementById('rot-participants-content').innerHTML=`<span style="font-size:13px;color:var(--text-muted);font-weight:600;">Add a block first.</span>`;return;}
+  if(!state.currentBlockId||!getBlock(state.currentBlockId))state.currentBlockId=state.blocks[0].id;
+  switcher.innerHTML=state.blocks.map(b=>`<button class="block-pill ${b.id===state.currentBlockId?'active':''}" onclick="selectRotBlock('${b.id}')">${esc(b.name)}</button>`).join('');
+  renderBlockParticipants();renderRotations();
+}
+function selectRotBlock(id){state.currentBlockId=id;save();renderRotationsTab();}
+
+function renderBlockParticipants(){
+  const b=getCurrentBlock();const el=document.getElementById('rot-participants-content');if(!b){el.innerHTML='';return;}
+  const effective=getBlockRoster(b);const isCustom=b.localRosterIds&&b.localRosterIds.length>0;
+  const excluded=isCustom?state.roster.filter(p=>!b.localRosterIds.includes(p.id)):[];
+  let html='';
+  if(!effective.length){html+=`<p style="font-size:13px;color:var(--text-muted);font-weight:600;font-style:italic;">No participants. Add people to the Roster tab first.</p>`;}
+  else{
+    html+=`<div class="p-bar">`;
+    effective.forEach(p=>{html+=`<div class="p-chip"><span class="p-chip-emoji">${p.avatar||'🐦'}</span><span>${esc(p.name)}</span><span class="p-chip-x" onclick="removeFromBlockRoster('${b.id}','${p.id}')">✕</span></div>`;});
+    if(excluded.length>0){const opts=excluded.map(p=>`<option value="${p.id}">${p.avatar||'🐦'} ${esc(p.name)}</option>`).join('');html+=`<select class="p-add-sel" onchange="addToBlockRoster('${b.id}',this.value);this.selectedIndex=0;"><option value="">+ Add…</option>${opts}</select>`;}
+    html+=`</div>`;
+  }
+  if(isCustom)html+=`<div style="margin-top:9px;display:flex;gap:8px;align-items:center;"><button class="btn btn-ghost btn-sm" style="font-size:12px;" onclick="resetBlockRoster('${b.id}')">↺ Reset to global roster</button></div>`;
+  if(userSavedRosters.length)html+=`<div style="display:flex;gap:8px;margin-top:10px;align-items:center;"><select id="rot-rsel" style="flex:1;font-size:13px;padding:8px 10px;border-radius:10px;border:1.5px solid var(--cloud-border);background:rgba(255,255,255,.75);color:var(--text);outline:none;cursor:pointer;"><option value="">Load a saved roster…</option>${userSavedRosters.map(sr=>`<option value="${sr.id}">${esc(sr.name)} (${(sr.members||[]).length})</option>`).join('')}</select><button class="btn btn-wind btn-sm" onclick="applyRosterInRotations('${b.id}')">Apply</button></div>`;
+  el.innerHTML=html;
+}
+function applyRosterInRotations(blockId){const sel=document.getElementById('rot-rsel');if(!sel||!sel.value){showToast('Select a roster first');return;}loadRosterToBlock(blockId,sel.value);showToast('✦ Roster applied!');renderRotationsTab();}
+
+function copyRotation(rotIdx){const b=getCurrentBlock();if(!b)return;copiedParticipants=[...(b.assignments[rotIdx]||[])];showToast(`📋 Copied ${copiedParticipants.length} participant${copiedParticipants.length===1?'':'s'}`);}
+function pasteRotation(rotIdx){if(!copiedParticipants){showToast('Nothing copied yet');return;}const b=getCurrentBlock();if(!b)return;syncSlots(b);const roster=getBlockRoster(b);b.assignments[rotIdx]=copiedParticipants.filter(id=>roster.some(p=>p.id===id));save();renderRotations();showToast(`✓ Pasted to Rotation ${rotIdx+1}`);}
+function pasteAllRotations(){if(!copiedParticipants){showToast('Nothing copied yet');return;}const b=getCurrentBlock();if(!b)return;syncSlots(b);const roster=getBlockRoster(b);const filtered=copiedParticipants.filter(id=>roster.some(p=>p.id===id));for(let i=0;i<b.numRotations;i++)b.assignments[i]=[...filtered];save();renderRotations();showToast(`✓ Pasted to all ${b.numRotations} rotations`);}
+
+function toggleSlot(rotIdx,personId){
+  const b=getCurrentBlock();if(!b)return;syncSlots(b);
+  const arr=b.assignments[rotIdx];const i=arr.indexOf(personId);
+  if(i===-1)arr.push(personId);else arr.splice(i,1);save();
+  const chip=document.getElementById(`chip-${rotIdx}-${personId}`);if(chip)chip.classList.toggle('on',i===-1);
+  const badge=document.getElementById(`badge-${rotIdx}`);const cnt=(b.assignments[rotIdx]||[]).length;
+  if(badge)badge.textContent=cnt===0?'none':`${cnt} people`;
+}
+
+function renderRotations(){
+  const b=getCurrentBlock();const el=document.getElementById('rotations-content');if(!b){el.innerHTML='';return;}syncSlots(b);
+  const roster=getBlockRoster(b);
+  if(!roster.length){el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">📋</div><strong>No participants for this block</strong><span>Add people via the Roster tab or load a saved roster above.</span></div></div>`;return;}
+  const dur=blockDur(b);let html='';
+  for(let i=0;i<b.numRotations;i++){
+    const assigned=(b.assignments[i]||[]).filter(pid=>roster.some(p=>p.id===pid));const cnt=assigned.length;
+    const chips=roster.map(p=>{const on=assigned.includes(p.id);return `<button class="chip ${on?'on':''}" id="chip-${i}-${p.id}" onclick="toggleSlot(${i},'${p.id}')"><span class="chip-emoji">${p.avatar||'🐦'}</span>${esc(p.name)}</button>`;}).join('');
+    html+=`<div class="rotation-card"><div class="rotation-header"><div class="rotation-num">${i+1}</div><div class="rotation-info"><div class="rotation-title">Rotation ${i+1}</div><div class="rotation-sub">${fmtTime(dur)} min · ${fmtM(dur*b.costPerMinute)} total</div></div><div class="rotation-badge" id="badge-${i}">${cnt===0?'none':cnt+' people'}</div><div class="rot-copy-bar"><button class="rot-copy-btn" onclick="copyRotation(${i})" title="Copy">📋</button><button class="rot-copy-btn" onclick="pasteRotation(${i})" title="Paste">📌</button><button class="rot-copy-btn" onclick="pasteAllRotations()" title="Paste all">📌→All</button></div></div><div class="rotation-body"><div class="chips">${chips}</div></div></div>`;
+  }
+  el.innerHTML=html;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUMMARY TAB
+═══════════════════════════════════════════════════════ */
+function renderSummary(){
+  const el=document.getElementById('summary-content');
+  if(!state.roster.length){el.innerHTML=`<div class="card"><div class="empty"><div class="empty-icon">📊</div><strong>Nothing to summarize yet</strong><span>Add participants and configure blocks.</span></div></div>`;return;}
+  const parts=[];
+  const warns=[];
+  state.blocks.forEach(b=>{
+    if(!(b.payers||[]).some(p=>p.personId))warns.push(`"${b.name}" has no payer set.`);
+    const paidMin=totalPayerMinutes(b);
+    if((b.payers||[]).some(p=>p.personId)&&Math.abs(paidMin-b.blockTime)>0.01)warns.push(`"${b.name}": payer minutes (${fmtN(paidMin)}) don't match block time (${fmtN(b.blockTime)}).`);
+    let ua=0;for(let i=0;i<b.numRotations;i++){if(!(b.assignments[i]||[]).filter(pid=>state.roster.some(p=>p.id===pid)).length)ua++;}
+    if(ua)warns.push(`"${b.name}": ${ua} rotation${ua>1?'s':''} unassigned.`);
+  });
+  if(warns.length)parts.push(`<div class="warning">⚠️ ${warns.join(' ')}</div>`);
+
+  const globalRows=calcGlobal();const active=globalRows.filter(r=>r.totalOwed>0.001||r.totalPaid>0.001);
+  if(active.length){
+    const rows=active.map(r=>{const nc=r.net>0.005?'col-pos':r.net<-0.005?'col-neg':'col-zero';const ns=r.net>0.005?`+${fmtM(r.net)}`:r.net<-0.005?`−${fmtM(-r.net)}`:'—';return `<tr><td><div class="person-cell">${avHtml(r,true)}${esc(r.name)}</div></td><td class="col-muted">${fmtM(r.totalOwed)}</td><td style="color:var(--success)">${fmtM(r.totalPaid)}</td><td class="${nc}">${ns}</td></tr>`;}).join('');
+    parts.push(`<div class="card"><div class="card-title">🌬️ Net Balances — All Blocks</div><table class="summary-table"><thead><tr><th>Name</th><th>Owes</th><th>Paid</th><th style="text-align:right">Net</th></tr></thead><tbody>${rows}</tbody></table><p style="font-size:11px;color:var(--text-muted);margin-top:10px;font-weight:700;line-height:1.4;">✦ <span style="color:var(--success)">Positive</span> = others owe them &nbsp;·&nbsp; <span style="color:var(--danger)">Negative</span> = they owe others</p></div>`);
+  }
+  const txns=calcSettlement(globalRows);
+  if(txns.length){const txnHtml=txns.map(t=>`<div class="txn-card">${avHtml(t.from,true)}<span class="txn-name">${esc(t.from.name)}</span><span class="txn-arrow">→</span>${avHtml(t.to,true)}<span class="txn-name">${esc(t.to.name)}</span><span class="txn-amount">${fmtM(t.amount)}</span></div>`).join('');parts.push(`<div class="card"><div class="card-title">✦ Settle Up</div><div class="txn-list">${txnHtml}</div></div>`);}
+  else if(active.length)parts.push(`<div class="card"><div class="empty" style="padding:16px"><div class="empty-icon">✅</div><strong>All settled!</strong><span>No transfers needed.</span></div></div>`);
+
+  if(state.blocks.length){
+    const accs=state.blocks.map((b,idx)=>{
+      const payerIds=new Set((b.payers||[]).map(p=>p.personId).filter(Boolean));
+      const allSummary=calcBlockSummary(b);const involved=new Set([...allSummary.filter(r=>r.minutes>0).map(r=>r.id),...[...payerIds]]);
+      let bRows=allSummary.filter(r=>involved.has(r.id));
+      const tRows=bRows.length?bRows.map(r=>{const paid=blockAmountPaid(b,r.id);const net=paid-r.cost;const isPayer=payerIds.has(r.id);const nameBadge=isPayer?`<span class="badge">paid</span>`:'';const minsCell=r.minutes>0?`<td class="col-muted">${fmtTime(r.minutes)}</td>`:`<td class="col-muted" style="font-style:italic">—</td>`;const costCell=r.cost>0.001?`<td class="col-muted">${fmtM(r.cost)}</td>`:`<td class="col-muted">—</td>`;const paidCell=paid>0.001?`<td style="color:var(--success);font-weight:800">${fmtM(paid)}</td>`:`<td class="col-muted">—</td>`;const nc=net>0.005?'col-pos':net<-0.005?'col-neg':'col-zero';const ns=net>0.005?`+${fmtM(net)}`:net<-0.005?`−${fmtM(-net)}`:'—';return `<tr><td><div class="person-cell">${avHtml(r,true)}${esc(r.name)}${nameBadge}</div></td>${minsCell}${costCell}${paidCell}<td class="${nc}" style="text-align:right;font-weight:800">${ns}</td></tr>`;}).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:14px;font-size:13px;">No assignments yet</td></tr>`;
+      const payerNames=(b.payers||[]).map(p=>state.roster.find(r=>r.id===p.personId)).filter(Boolean).map(p=>esc(p.name)).join(', ');
+      const sub=`${fmtM(blockTotal(b))} total · ${b.numRotations} rotations${payerNames?' · paid by '+payerNames:''}`;
+      return `${idx>0?'<div class="divider"></div>':''}<div class="accordion ${idx===0?'open':''}"><div class="accordion-header" onclick="toggleAcc(this)"><div><div class="accordion-title">${esc(b.name)}</div><div class="accordion-sub">${sub}</div></div><div class="accordion-chevron">⌄</div></div><div class="accordion-body"><table class="summary-table" style="margin-top:4px"><thead><tr><th>Name</th><th>Used</th><th>Cost</th><th>Paid</th><th style="text-align:right">Net</th></tr></thead><tbody>${tRows}</tbody></table></div></div>`;
+    }).join('');
+    parts.push(`<div class="card" style="padding:0;overflow:hidden;"><div style="padding:18px 18px 14px;"><div class="card-title">Per-Block Breakdown</div></div><div class="divider"></div>${accs}</div>`);
+  }
+  el.innerHTML=parts.join('')||`<div class="card"><div class="empty"><div class="empty-icon">💨</div><strong>Configure blocks &amp; rotations first</strong></div></div>`;
+}
+function toggleAcc(h){h.closest('.accordion').classList.toggle('open');}
+
+/* ═══════════════════════════════════════════════════════
+   PDF EXPORT
+═══════════════════════════════════════════════════════ */
+function openPDFModal(){const modal=document.getElementById('pdf-modal');const input=document.getElementById('pdf-date-input');const cb=getCurrentBlock();input.value=(cb&&cb.date)?cb.date:todayISO();modal.style.display='flex';}
+function closePDFModal(){document.getElementById('pdf-modal').style.display='none';}
+
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    if(document.querySelector(`script[data-src="${src}"]`)){resolve();return;}
+    const s=document.createElement('script');s.dataset.src=src;s.src=src;
+    s.onload=resolve;s.onerror=()=>reject(new Error('Failed to load: '+src));
+    document.head.appendChild(s);
+  });
+}
+
+async function doPDFExport(){
+  const dateKey=document.getElementById('pdf-date-input').value;
+  if(!dateKey){showToast('Pick a date first');return;}
+  const blocks=state.blocks.filter(b=>(b.date||todayISO())===dateKey);
+  if(!blocks.length){showToast(`No blocks found for ${fmtDateLabel(dateKey)}`);return;}
+  closePDFModal();showToast('Building PDF...');
+  try{
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js');
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight(),M=14,CW=PW-M*2;
+    const CP=[124,58,237],CK=[219,39,119],CM=[124,116,212],CD=[30,27,75],CG=[5,150,105],CR=[239,68,68],CH=[225,213,255],CA=[249,246,255];
+    let y=M;
+    function stampFooter(){const n=doc.internal.getNumberOfPages();doc.setPage(n);doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(180,175,220);doc.text(`HuckTime  |  ${fmtDateLabel(dateKey)}  |  Page ${n}`,M,PH-5);}
+    function checkY(needed){if(y+needed>PH-16){stampFooter();doc.addPage();y=M;}}
+    const tbl=(opts)=>doc.autoTable({margin:{left:M,right:M},styles:{fontSize:9,cellPadding:3,textColor:CD,lineColor:CH,lineWidth:0.15},headStyles:{fillColor:CH,textColor:CD,fontStyle:'bold',fontSize:8},alternateRowStyles:{fillColor:CA},...opts});
+    const netColor=(d,col)=>{if(d.section!=='body'||d.column.index!==col)return;const v=d.cell.raw;d.cell.styles.textColor=v.startsWith('+')?CG:v.startsWith('-')?CR:CM;};
+    doc.setFontSize(20);doc.setFont('helvetica','bold');doc.setTextColor(...CP);doc.text('HuckTime',M,y+7);
+    doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(...CM);doc.text(fmtDateLabel(dateKey),M,y+14);y+=20;
+    doc.setDrawColor(...CP);doc.setLineWidth(0.4);doc.line(M,y,PW-M,y);y+=7;
+    doc.setFontSize(14);doc.setFont('helvetica','bold');doc.setTextColor(...CK);doc.text('Rotations',M,y);y+=6;
+    blocks.forEach(b=>{
+      const roster=getBlockRoster(b),dur=blockDur(b);
+      const pNames=(b.payers||[]).map(p=>state.roster.find(r=>r.id===p.personId)).filter(Boolean).map(p=>p.name).join(', ');
+      const metaStr=`$${b.costPerMinute}/min  |  ${fmtN(b.blockTime)} min  |  ${b.numRotations} rotations  |  Total: ${fmtM(blockTotal(b))}${pNames?'  |  Paid by: '+pNames:''}`;
+      checkY(36);doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(...CD);doc.text(b.name,M,y+5);doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(...CM);const mLines=doc.splitTextToSize(metaStr,CW);doc.text(mLines,M,y+11);y+=12+(mLines.length-1)*4;
+      const rotRows=[];for(let i=0;i<b.numRotations;i++){const asgn=(b.assignments[i]||[]).filter(pid=>roster.some(p=>p.id===pid));const people=asgn.map(pid=>roster.find(p=>p.id===pid)).filter(Boolean);rotRows.push([String(i+1),fmtTime(dur)+' min',people.length?people.map(p=>p.name).join(', '):'(unassigned)']);}
+      tbl({startY:y,head:[['#','Duration','Participants']],body:rotRows,columnStyles:{0:{cellWidth:10,halign:'center'},1:{cellWidth:28}},didParseCell:d=>{if(d.section==='body'&&d.column.index===2&&d.cell.raw==='(unassigned)')d.cell.styles.textColor=[160,160,190];}});y=doc.lastAutoTable.finalY+8;
+    });
+    checkY(20);doc.setDrawColor(...CP);doc.setLineWidth(0.4);doc.line(M,y,PW-M,y);y+=7;
+    doc.setFontSize(14);doc.setFont('helvetica','bold');doc.setTextColor(...CK);doc.text('Summary',M,y);y+=6;
+    const peopleInDay=new Set();blocks.forEach(b=>{b.assignments.forEach(a=>a.forEach(id=>peopleInDay.add(id)));(b.payers||[]).forEach(p=>{if(p.personId)peopleInDay.add(p.personId);});});
+    const dayRoster=state.roster.filter(p=>peopleInDay.has(p.id));const dmap={};dayRoster.forEach(p=>{dmap[p.id]={...p,totalOwed:0,totalPaid:0};});
+    blocks.forEach(b=>{(b.payers||[]).forEach(py=>{if(dmap[py.personId])dmap[py.personId].totalPaid+=(parseFloat(py.minutes)||0)*b.costPerMinute;});calcBlockSummary(b).forEach(r=>{if(dmap[r.id])dmap[r.id].totalOwed+=r.cost;});});
+    const dayRows=Object.values(dmap).map(r=>({...r,net:r.totalPaid-r.totalOwed}));const txns=calcSettlement(dayRows);const active2=dayRows.filter(r=>r.totalOwed>0.001||r.totalPaid>0.001);
+    if(active2.length){checkY(30);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(...CM);doc.text('Net Balances',M,y);y+=3;tbl({startY:y,head:[['Name','Owes','Paid','Net']],body:active2.map(r=>{const n=r.net>0.005?'+'+fmtM(r.net):r.net<-0.005?'-'+fmtM(-r.net):'-';return[r.name,fmtM(r.totalOwed),fmtM(r.totalPaid),n];}),didParseCell:d=>netColor(d,3)});y=doc.lastAutoTable.finalY+8;}
+    if(txns.length){checkY(25);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(...CM);doc.text('Settle Up',M,y);y+=3;tbl({startY:y,head:[['Pays','->','Receives','Amount']],body:txns.map(t=>[t.from.name,'->',t.to.name,fmtM(t.amount)]),columnStyles:{1:{cellWidth:10,halign:'center',fontStyle:'bold',textColor:CP},3:{fontStyle:'bold',textColor:CK}}});y=doc.lastAutoTable.finalY+8;}
+    else if(active2.length){checkY(12);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(...CG);doc.text('All settled — no transfers needed',M,y);y+=10;}
+    checkY(20);doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(...CM);doc.text('Per-Block Breakdown',M,y);y+=3;
+    blocks.forEach(b=>{
+      const payerIds=new Set((b.payers||[]).map(p=>p.personId).filter(Boolean));const allSumm=calcBlockSummary(b);const involved=new Set([...allSumm.filter(r=>r.minutes>0).map(r=>r.id),...[...payerIds]]);const bRows=allSumm.filter(r=>involved.has(r.id));
+      const pNames2=(b.payers||[]).map(p=>state.roster.find(r=>r.id===p.personId)).filter(Boolean).map(p=>p.name).join(', ');
+      checkY(30);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(...CD);const label=`${b.name} — ${fmtM(blockTotal(b))}${pNames2?' (paid by: '+pNames2+')':''}`;const lLines=doc.splitTextToSize(label,CW);doc.text(lLines,M,y+4);y+=5+(lLines.length-1)*4;
+      tbl({startY:y,head:[['Name','Used','Cost','Paid','Net']],body:bRows.length?bRows.map(r=>{const paid=blockAmountPaid(b,r.id);const net=paid-r.cost;const ns=net>0.005?'+'+fmtM(net):net<-0.005?'-'+fmtM(-net):'-';return[r.name+(payerIds.has(r.id)?' (paid)':''),r.minutes>0?fmtTime(r.minutes):'-',r.cost>0.001?fmtM(r.cost):'-',paid>0.001?fmtM(paid):'-',ns];}):[[' No assignments yet','','','','']],didParseCell:d=>netColor(d,4)});y=doc.lastAutoTable.finalY+7;
+    });
+    stampFooter();
+    const pdfBlob=doc.output('blob');const blobUrl=URL.createObjectURL(pdfBlob);const a=document.createElement('a');a.href=blobUrl;a.download=`hucktime-${dateKey}.pdf`;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(blobUrl),3000);
+    showToast('✓ PDF saved!');
+  }catch(e){console.error('PDF error:',e);showToast('PDF failed: '+(e.message||e));}
+}
+
+/* ═══════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════ */
+let _tt;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2400);}
+
+/* ═══════════════════════════════════════════════════════
+   SKY ANIMATION
+═══════════════════════════════════════════════════════ */
+const PUFFS=[{x:0,y:105,w:420,h:65,r:'60px'},{x:15,y:45,w:130,h:120,r:'50%'},{x:105,y:8,w:150,h:145,r:'50%'},{x:215,y:0,w:160,h:155,r:'50%'},{x:300,y:18,w:135,h:128,r:'50%'},{x:375,y:52,w:110,h:105,r:'50%'}];
+const CLOUD_CFGS=[{top:2,s:1.9,op:.58,dur:70,dl:-8},{top:16,s:1.2,op:.50,dur:50,dl:-22},{top:0,s:.8,op:.38,dur:90,dl:-50},{top:27,s:1.5,op:.46,dur:58,dl:-5},{top:10,s:1.0,op:.42,dur:80,dl:-65},{top:22,s:1.3,op:.44,dur:55,dl:-35},{top:5,s:.7,op:.34,dur:100,dl:-75}];
+const WIND_CFGS=[{y:70,a:20,rgb:'139,92,246',da:'48 24',dur:5.5,dl:0},{y:145,a:11,rgb:'219,39,119',da:'30 16',dur:7.2,dl:1.3},{y:230,a:24,rgb:'139,92,246',da:'58 26',dur:4.8,dl:.5},{y:315,a:14,rgb:'167,139,250',da:'38 20',dur:8.5,dl:2.2},{y:400,a:17,rgb:'219,39,119',da:'44 22',dur:6.0,dl:.9},{y:490,a:22,rgb:'139,92,246',da:'52 28',dur:5.2,dl:1.7},{y:575,a:9,rgb:'219,39,119',da:'26 14',dur:9.5,dl:3.1},{y:660,a:18,rgb:'167,139,250',da:'45 22',dur:7.0,dl:.3},{y:745,a:15,rgb:'139,92,246',da:'40 20',dur:7.8,dl:1.9},{y:825,a:12,rgb:'219,39,119',da:'32 18',dur:6.2,dl:2.6}];
+let skyInited=false;
+function initSky(){
+  if(skyInited)return;skyInited=true;
+  const canvas=document.getElementById('sky-canvas');const svg=document.getElementById('wind-svg');if(!canvas||!svg)return;
+  CLOUD_CFGS.forEach(cfg=>{
+    const s=cfg.s,div=document.createElement('div');div.className='cloud-group';const W=Math.round(420*s);
+    div.style.cssText=`top:${cfg.top}%;left:-${W+30}px;width:${W}px;height:${Math.round(170*s)}px;opacity:${cfg.op};animation-duration:${cfg.dur}s;animation-delay:${cfg.dl}s`;
+    PUFFS.forEach(p=>{const el=document.createElement('div');el.className='puff';const base=p.r!=='50%';el.style.cssText=[`left:${Math.round(p.x*s)}px`,`top:${Math.round(p.y*s)}px`,`width:${Math.round(p.w*s)}px`,`height:${Math.round(p.h*s)}px`,`border-radius:${base?p.r:'50%'}`,`background:${base?'rgba(242,238,255,.88)':'rgba(255,255,255,.93)'}`,`box-shadow:0 8px 40px rgba(167,139,250,${base?'.06':'.04'})`].join(';');div.appendChild(el);});
+    canvas.insertBefore(div,svg);
+  });
+  WIND_CFGS.forEach(cfg=>{const ns='http://www.w3.org/2000/svg';const p=document.createElementNS(ns,'path');const y=cfg.y,a=cfg.a;p.setAttribute('d',`M -10 ${y} Q 60 ${y-a}, 120 ${y} T 240 ${y} T 360 ${y} T 500 ${y}`);p.setAttribute('fill','none');p.setAttribute('stroke',`rgba(${cfg.rgb},1)`);p.setAttribute('stroke-width','2');p.setAttribute('stroke-dasharray',cfg.da);p.setAttribute('stroke-linecap','round');p.style.cssText=`opacity:.13;animation:windFlow ${cfg.dur}s linear ${cfg.dl}s infinite`;svg.appendChild(p);});
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   KEYBOARD HANDLERS (registered after DOM is ready)
+═══════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('roster-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPerson();
+  });
+  document.getElementById('auth-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doAuth();
+  });
+  document.getElementById('auth-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { document.getElementById('auth-password').focus(); }
+  });
+});
+
+/* ═══════════════════════════════════════════════════════
+   INIT — FIREBASE AUTH STATE
+═══════════════════════════════════════════════════════ */
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('home-user-email').textContent = user.email || '';
+    showScreen('home');
+    loadSavedHucks();
+  } else {
+    showScreen('auth');
+    setAuthMode('login');
+  }
+});
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
