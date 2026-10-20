@@ -1600,6 +1600,17 @@ function initSky(){
 /* ═══════════════════════════════════════════════════════
    KEYBOARD HANDLERS (registered after DOM is ready)
 ═══════════════════════════════════════════════════════ */
+// Remove Netlify badge
+const _removeNetlifyBadge = () => {
+  const badge = document.querySelector('[data-netlify]') ||
+    document.querySelector('a[href*="netlify"]') ||
+    [...document.querySelectorAll('div')].find(el =>
+      el.style.position === 'fixed' && el.innerText?.includes('Netlify'));
+  if (badge) badge.remove();
+};
+setTimeout(_removeNetlifyBadge, 500);
+setTimeout(_removeNetlifyBadge, 2000);
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('roster-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') addPerson();
